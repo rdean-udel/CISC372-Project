@@ -19,11 +19,14 @@ int main(void) {
 	double complex  r1 = 1 + 0*I;
 	double complex  r2 = -0.5 + sin(2 * pi / 3)*I;
 	double complex  r3 = -0.5 - sin(2 * pi / 3)*I;
-	int points[4] = { 0 };
+	int root1 = 0, root2 = 0, root3 = 0, noRoot = 0;
 	StartTimer();
-
-	#pragma acc data copy(points[0:4])
-	#pragma acc loop reduction(+:points)
+	
+	#pragma acc data copy(root1, root2, root3, noRoot)
+	{
+	#pragma acc parallel
+	{
+	#pragma acc loop reduction(+:root1, root2, root3, noRoot)
 	for (int y = 0; y < steps; y++) {
 		for (int x = 0; x < steps; x++) {
 			double complex z = (xMin + (xMax - xMin) * 1.0 * x / (steps - 1)) + (yMin + (yMax - yMin) * 1.0 * y / (steps - 1)) * I;
@@ -36,25 +39,27 @@ int main(void) {
 			}
 
 			if (cabs(z - r1) < Tol && abs(cimag(z)) < Tol) {
-				points[1]++;
+				root1++;
 			}
 			else if (cabs(z - r2) <= Tol && cimag(z) > -Tol) {
-				points[2]++;
+				root2++;
 			}
 			else if (cabs(z - r3) <= Tol && cimag(z) < Tol) {
-				points[3]++;
+				root3++;
 			}
 			else {
-				points[0]++;
+				noRoot++;
 			}
 		}
+	}
+	} 
 	}
 	double runtime = GetTimer();
 
 	printf("Newton Fractal for %d points:\n", steps * steps);
-	printf("Points that converged to no roots : %d (%.2f%%)\n", points[0], 100.0 * points[0] / (steps * steps));
-	printf("Points that converged to root %.2f + %.2fi: %d (%.2f%%)\n", creal(r1), cimag(r1), points[1], 100.0 * points[1] / (steps * steps));
-	printf("Points that converged to root %.2f + %.2fi: %d (%.2f%%)\n", creal(r2), cimag(r2), points[2], 100.0 * points[2] / (steps * steps));
-	printf("Points that converged to root %.2f + %.2fi: %d (%.2f%%)\n", creal(r3), cimag(r3), points[3], 100.0 * points[3] / (steps * steps));
+	printf("Points that converged to no roots : %d (%.2f%%)\n", noRoot, 100.0 * noRoot / (steps * steps));
+	printf("Points that converged to root %.2f + %.2fi: %d (%.2f%%)\n", creal(r1), cimag(r1), root1, 100.0 * root1 / (steps * steps));
+	printf("Points that converged to root %.2f + %.2fi: %d (%.2f%%)\n", creal(r2), cimag(r2), root2, 100.0 * root2 / (steps * steps));
+	printf("Points that converged to root %.2f + %.2fi: %d (%.2f%%)\n", creal(r3), cimag(r3), root3, 100.0 * root3 / (steps * steps));
 	printf("Time taken: %f s\n", runtime / 1000);
 }
